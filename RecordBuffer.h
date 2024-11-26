@@ -5,11 +5,14 @@
 
 class RecordBuffer : public Buffer {
 public:
-	RecordBuffer(size_t size) : Buffer(size) {};
+	RecordBuffer(int record_size) : Buffer(record_size * sizeof(Record)), _record_size(record_size) {};
 	~RecordBuffer();
 
 	Record getNextRecord();
 	void putNextRecord(Record record);
+	Record* getRecordBuffer();
+	int howManyRecordsLeft();
 
 protected:
+	int _record_size;
 };

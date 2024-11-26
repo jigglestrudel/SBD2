@@ -23,7 +23,7 @@ public:
 
 protected:
 	std::fstream _file_stream;
-	Buffer _record_buffer;
+	Buffer* _buffer;
 	const char* _file_path;
 	size_t _block_size;
 };

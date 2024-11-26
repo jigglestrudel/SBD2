@@ -13,11 +13,16 @@ public:
 	};
 };
 
+
 class Record
 {
 public:
 	Record(int k, Trapezoid v);
 	~Record();
+
+	int getKey();
+	Trapezoid getValue();
+	void setValue(Trapezoid value);
 
 private:
 	int _key;

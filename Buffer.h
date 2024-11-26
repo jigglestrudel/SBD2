@@ -7,12 +7,13 @@ class Buffer {
 public:
 	Buffer();
 	Buffer(size_t size);
-	~Buffer();
+	virtual ~Buffer();
 
-	std::byte* getBuffer();
+	virtual std::byte* getBuffer();
 	size_t getSize();
 
-	void resetCursor();
+	void resetCursor(size_t cur, size_t bytes_read);
+
 
 protected:
 	void incCursor(size_t inc);
@@ -20,4 +21,5 @@ protected:
 	std::byte* _buffer;
 	size_t _size;
 	size_t _cursor;
+	size_t _bytes_read;
 };

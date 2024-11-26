@@ -2,14 +2,14 @@
 
 RandomAccessFile::RandomAccessFile(size_t block_size)
 {
-	this->_record_buffer = Buffer(block_size);
+	this->_buffer = new Buffer(block_size);
 	this->_block_size = block_size;
 	this->_file_path = nullptr;
 }
 
 RandomAccessFile::~RandomAccessFile()
 {
-
+	delete this->_buffer;
 }
 
 void RandomAccessFile::open(const char* file_path)
@@ -27,11 +27,19 @@ void RandomAccessFile::loadBlockToBuffer(int block_number)
 {
 	this->_file_stream.seekg(block_number * this->_block_size, std::ios_base::beg);
 	this->_file_stream.read((char*)(this->getBuffer()), this->_block_size);
-	this->_record_buffer.resetCursor();
+	this->_buffer->resetCursor(0, this->_file_stream.gcount());
 
+}
+
+void RandomAccessFile::offloadBlockToFile(int block_number)
+{
+
+	this->_file_stream.seekp(block_number * this->_block_size, std::ios_base::beg);
+	this->_file_stream.write((char*)(this->getBuffer()), this->_block_size);
+	this->_buffer->resetCursor(0, 0);
 }
 
 std::byte* RandomAccessFile::getBuffer()
 {
-	return this->_record_buffer.getBuffer();
+	return this->_buffer->getBuffer();
 }

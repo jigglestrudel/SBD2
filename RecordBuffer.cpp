@@ -19,6 +19,7 @@ Record RecordBuffer::getNextRecord()
 	return output;
 }
 
+
 void RecordBuffer::putNextRecord(Record record)
 {
 	if (this->_size - this->_cursor < sizeof(Record))
@@ -30,4 +31,14 @@ void RecordBuffer::putNextRecord(Record record)
 	*record_place = record;
 
 	this->incCursor(sizeof(Record));
+}
+
+Record* RecordBuffer::getRecordBuffer()
+{
+	return (Record*)(this->_buffer);
+}
+
+int RecordBuffer::howManyRecordsLeft()
+{
+	return this->_record_size - (this->_cursor / sizeof(Record));
 }
