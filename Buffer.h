@@ -12,7 +12,9 @@ public:
 	virtual std::byte* getBuffer();
 	size_t getSize();
 
-	void resetCursor(size_t cur, size_t bytes_read);
+	void clear();
+
+	void resetCursor(size_t cur);
 
 
 protected:
@@ -21,5 +23,4 @@ protected:
 	std::byte* _buffer;
 	size_t _size;
 	size_t _cursor;
-	size_t _bytes_read;
 };

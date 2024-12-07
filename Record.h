@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <cstdint>
 
 struct Trapezoid
 {
@@ -13,18 +14,24 @@ public:
 	};
 };
 
+typedef std::uint64_t Key;
 
 class Record
 {
 public:
-	Record(int k, Trapezoid v);
+	Record(Key k, Trapezoid v);
 	~Record();
 
-	int getKey();
+	Key getKey();
 	Trapezoid getValue();
 	void setValue(Trapezoid value);
 
+	friend std::ostream& operator<< (std::ostream& stream, const Record& record)
+	{
+		return stream << record._key << ": " << record._value;
+	};
+
 private:
-	int _key;
+	Key _key;
 	Trapezoid _value;
 };

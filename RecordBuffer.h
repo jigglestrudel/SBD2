@@ -9,8 +9,10 @@ public:
 	~RecordBuffer();
 
 	Record getNextRecord();
-	void putNextRecord(Record record);
+	int putRecordInFirstEmpty(Record record);
+	void putRecordAtIndex(Record record, int index);
 	Record* getRecordBuffer();
+	Record getRecordAtIndex(int index);
 	int howManyRecordsLeft();
 
 protected:

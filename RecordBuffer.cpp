@@ -20,18 +20,32 @@ Record RecordBuffer::getNextRecord()
 }
 
 
-void RecordBuffer::putNextRecord(Record record)
+int RecordBuffer::putRecordInFirstEmpty(Record record)
 {
-	if (this->_size - this->_cursor < sizeof(Record))
+	int index = 0;
+	while (index < this->_record_size &&
+		this->getRecordAtIndex(index).getKey() != -1)
+		index++;
+	if (index < this->_record_size)
 	{
-		throw std::out_of_range("Not enough bytes in buffer to fit a record");
+		this->putRecordAtIndex(record, index);
+		return index;
+	}
+	else
+		return -1;
+	
+}
+
+void RecordBuffer::putRecordAtIndex(Record record, int index)
+{
+	if (index >= this->_record_size)
+	{
+		throw std::out_of_range("outside the buffer");
 	}
 
-	Record* record_place = (Record*)(this->_buffer + this->_cursor);
-	*record_place = record;
-
-	this->incCursor(sizeof(Record));
+	this->getRecordBuffer()[index] = record;
 }
+
 
 Record* RecordBuffer::getRecordBuffer()
 {
@@ -41,4 +55,9 @@ Record* RecordBuffer::getRecordBuffer()
 int RecordBuffer::howManyRecordsLeft()
 {
 	return this->_record_size - (this->_cursor / sizeof(Record));
+}
+
+Record RecordBuffer::getRecordAtIndex(int index)
+{
+	return ((Record*)(this->_buffer))[index];
 }

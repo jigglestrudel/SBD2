@@ -29,10 +29,14 @@ size_t Buffer::getSize()
 	return this->_size;
 }
 
-void Buffer::resetCursor(size_t cur, size_t bytes_read)
+void Buffer::clear()
+{
+	memset(this->_buffer, 0xff, this->_size);
+}
+
+void Buffer::resetCursor(size_t cur)
 {
 	this->_cursor = cur;
-	this->_bytes_read = bytes_read;
 }
 
 void Buffer::incCursor(size_t inc)

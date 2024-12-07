@@ -1,21 +1,27 @@
 #pragma once
 
+#include <queue>
+
 #include "RandomAccessFile.h";
 #include "RecordBuffer.h"
 
 class RecordFile : RandomAccessFile
 {
 public:
-	RecordFile(int record_block_size);
+	RecordFile(const char* file_path, int record_page_size);
 	~RecordFile();
 
-	Record getRecordFromFile(int block_number, int record_key);
-	void putRecordInFile(Record record);
+	Record getRecordFromFile(unsigned int record_number);
+	unsigned int putRecordInFile(Record record);
+	void deleteRecordFromFile(unsigned int record_number);
+	void findEmptyPlaces();
 
 	Record* getRecordBuffer();
 
 protected:
-	int _record_block_size;
-	int _block_count;
+	RecordBuffer* getRecordBufferObject();
+
+	std::queue<unsigned int> _empty_place_queue;
+	int _record_page_size;
 
 };
