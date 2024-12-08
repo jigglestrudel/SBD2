@@ -28,13 +28,22 @@ int main(int argc, char** argv)
 	bdrzewo.findEmptyPages();
 	bdrzewo.findRoot();
 	bdrzewo.showTree();
-	//for (uint64_t i = 0; i < 100; i++)
+	bdrzewo.showFile();
+	for (uint64_t i = 0; i < 100; i++)
 	{
 		
-		bdrzewo.insert({ (uint64_t)(rand() % 5000), 0 });
+		bdrzewo.insert({ (uint64_t)(rand() % 100), 0 });
 			//<< "\n";
+		bdrzewo.showTree();
 	}
-	//bdrzewo.showTree();
+	//for (uint64_t i = 0; i < 100; i++)
+	{
+		//bdrzewo.remove((uint64_t)(rand() % 100));
+		//<< "\n";
+		//bdrzewo.showTree();
+	}
+	bdrzewo.offloadAll();
+	bdrzewo.showFile();
 	
 	return 0;
 }

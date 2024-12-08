@@ -20,6 +20,13 @@ struct KeyStruct
 	bool operator== (KeyStruct& other);
 };
 
+enum NodeType : uint64_t
+{
+	EMPTY = 0xffffffffffffffffu,
+	ROOT = 0x746F6F72746F6F72u,
+	NODE = 0x65646F6E65646F6Eu
+};
+
 class BTreeNode
 {
 public:
@@ -38,7 +45,7 @@ public:
 	void replaceKey(KeyStruct key_s, int index);
 	void insertChild(PageN child, int index);
 
-	bool is_full;
+	NodeType type;
 	PageN page_number;
 	PageN parent;
 	std::deque<KeyStruct> keys;

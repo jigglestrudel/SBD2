@@ -2,7 +2,7 @@
 
 #include <queue>
 
-#include "RandomAccessFile.h";
+#include "RandomAccessFile.h"
 #include "RecordBuffer.h"
 
 class RecordFile : RandomAccessFile

@@ -7,7 +7,6 @@
 #include "BTreeNode.h"
 
 
-
 class BTreeFile : RandomAccessFile
 {
 public:
@@ -19,8 +18,12 @@ public:
 
 	KeyStruct search(Key key);
 	bool insert(KeyStruct key_s);
+	bool remove(Key key);
+	void offloadAll();
 
 	void showTree();
+
+	void showFile();
 
 protected:
 	std::uint64_t allocateNewNode();
@@ -30,13 +33,22 @@ protected:
 
 	void offloadLoadedNodes();
 	void offloadRoot();
+	
 
 	std::shared_ptr<BTreeNode> getNode(PageN page_number);
+	std::shared_ptr<BTreeNode> grabTopLoaded();
+	std::shared_ptr<BTreeNode> grabSecondLoaded();
+	void offloadTopLoaded();
+	void loadOnTop(PageN page_number);
 
-	void splitNode(PageN page_number);
+	void splitNode();
 	void splitRoot();
 
-	bool compensation(PageN page_number);
+	void mergeNode();
+
+	bool insertCompensation();
+
+	bool removeCompensation();
 
 	void printNodeReccurency(PageN page_number, int level);
 

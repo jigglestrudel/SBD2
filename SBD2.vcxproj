@@ -133,6 +133,7 @@
     <ClCompile Include="BTreeNode.cpp" />
     <ClCompile Include="BTreeNode.h" />
     <ClCompile Include="Buffer.cpp" />
+    <ClCompile Include="Database.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RandomAccessFile.cpp" />
     <ClCompile Include="Record.cpp" />
@@ -143,6 +144,7 @@
     <ClInclude Include="BTreeBuffer.h" />
     <ClInclude Include="BTreeFile.h" />
     <ClInclude Include="Buffer.h" />
+    <ClInclude Include="Database.h" />
     <ClInclude Include="RandomAccessFile.h" />
     <ClInclude Include="Record.h" />
     <ClInclude Include="RecordBuffer.h" />

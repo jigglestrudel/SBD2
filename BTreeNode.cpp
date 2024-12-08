@@ -12,7 +12,7 @@ BTreeNode::BTreeNode()
 	this->children = std::deque<PageN>();
 	this->keys = std::deque<KeyStruct>();
 	this->parent = UINT64_MAX;
-	this->is_full = false;
+	this->type = NODE;
 }
 //
 //BTreeNode::BTreeNode(const BTreeNode& btn)
@@ -49,15 +49,10 @@ BTreeNode::~BTreeNode()
 
 void BTreeNode::readPage(std::byte* buffer_page, size_t buffer_size)
 {
-	if (buffer_page[0] == std::byte{ 0xFF })
-	{
-		this->is_full = false;
+	this->type = *(NodeType*)(buffer_page);
+	if (this->type == EMPTY)
 		return;
-	}
-	this->is_full = true;
-	size_t index = sizeof(uint64_t);
-	this->parent = *(PageN*)(buffer_page + index);
-	index += sizeof(PageN);
+	size_t index = sizeof(NodeType);
 	if (*(PageN*)(buffer_page + index) != UINT64_MAX)
 		this->children.push_back(*(PageN*)(buffer_page + index));
 	index += sizeof(PageN);
@@ -73,11 +68,12 @@ void BTreeNode::readPage(std::byte* buffer_page, size_t buffer_size)
 
 void BTreeNode::writePage(std::byte* buffer_page, size_t buffer_size)
 {
+	//std::cout << "write: printing out node " << this->page_number << " k:" << this->keys.size() << " ch:" << this->children.size()<<"\n";
+	if (this->children.size() != 0 && this->children.size() != this->keys.size() + 1)
+		throw std::invalid_argument("keys and children dont match");
 	memset(buffer_page, 0xff, buffer_size);
-	*(uint64_t*)(buffer_page) = 0xEFCDAB8967452301ui64;
-	size_t index = sizeof(uint64_t);
-	*(PageN*)(buffer_page + index) = this->parent;
-	index += sizeof(PageN);
+	*(NodeType*)(buffer_page) = this->type;
+	size_t index = sizeof(NodeType);
 	
 	while (!this->keys.empty() || !this->children.empty())
 	{
@@ -93,8 +89,6 @@ void BTreeNode::writePage(std::byte* buffer_page, size_t buffer_size)
 			this->keys.pop_front();
 		}
 		index += sizeof(KeyStruct);
-		//if (index > buffer_size)
-			//throw std::out_of_range("NODE EXCEEDING BUFFER");
 	}
 }
 
