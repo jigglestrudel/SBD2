@@ -9,7 +9,7 @@ Buffer::Buffer()
 
 Buffer::Buffer(size_t size)
 {
-	this->_buffer = new std::byte[size];
+	this->_buffer = new std::byte[size * 2];
 	this->_size = size;
 	this->_cursor = 0;
 }

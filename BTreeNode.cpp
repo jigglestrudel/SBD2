@@ -74,19 +74,21 @@ void BTreeNode::writePage(std::byte* buffer_page, size_t buffer_size)
 	memset(buffer_page, 0xff, buffer_size);
 	*(NodeType*)(buffer_page) = this->type;
 	size_t index = sizeof(NodeType);
+	std::deque<KeyStruct> keys_to_print = this->keys;
+	std::deque<PageN> children_to_print = this->children;
 	
-	while (!this->keys.empty() || !this->children.empty())
+	while (!keys_to_print.empty() || !children_to_print.empty())
 	{
-		if (!this->children.empty())
+		if (!children_to_print.empty())
 		{
-			*(PageN*)(buffer_page + index) = this->children.front();
-			this->children.pop_front();
+			*(PageN*)(buffer_page + index) = children_to_print.front();
+			children_to_print.pop_front();
 		}
 		index += sizeof(PageN);
-		if (!this->keys.empty())
+		if (!keys_to_print.empty())
 		{
-			*(KeyStruct*)(buffer_page + index) = this->keys.front();
-			this->keys.pop_front();
+			*(KeyStruct*)(buffer_page + index) = keys_to_print.front();
+			keys_to_print.pop_front();
 		}
 		index += sizeof(KeyStruct);
 	}
@@ -158,7 +160,10 @@ int BTreeNode::insertKey(KeyStruct key_s)
 void BTreeNode::replaceKey(KeyStruct key_s, int index)
 {
 	if (index >= this->keys.size())
+	{
+		std::cout << "replace in node fail\n";
 		return;
+	}
 	this->keys[index] = key_s;
 }
 

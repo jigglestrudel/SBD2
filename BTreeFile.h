@@ -7,7 +7,7 @@
 #include "BTreeNode.h"
 
 
-class BTreeFile : RandomAccessFile
+class BTreeFile : public RandomAccessFile
 {
 public:
 	BTreeFile(const char* file_path, int d);
@@ -18,12 +18,23 @@ public:
 
 	KeyStruct search(Key key);
 	bool insert(KeyStruct key_s);
-	bool remove(Key key);
+	KeyStruct remove(Key key);
 	void offloadAll();
+	void resetLoaded();
 
 	void showTree();
 
 	void showFile();
+
+	void startKeyByKey();
+	KeyStruct getNextKey();
+	void stopKeyByKey();
+
+	void cleanBack();
+
+	bool shouldRebuild(double empty_limit);
+
+	int d;
 
 protected:
 	std::uint64_t allocateNewNode();
@@ -52,8 +63,11 @@ protected:
 
 	void printNodeReccurency(PageN page_number, int level);
 
-	int d;
+	
 	std::shared_ptr<BTreeNode> root;
 	std::vector<std::shared_ptr<BTreeNode>> loaded_nodes;
-	std::vector<PageN> empty_pages;
+	std::deque<PageN> empty_pages;
+	std::stack<int> key_by_key_cursors;
+
+	bool _debug;
 };

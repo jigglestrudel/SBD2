@@ -5,15 +5,18 @@ BTreeFile::BTreeFile(const char* file_path, int d) : RandomAccessFile(file_path,
 	this->d = d; 
 	this->limit_drive_reads = false;
 	this->loaded_nodes = std::vector<std::shared_ptr<BTreeNode>>();
-	this->empty_pages = std::vector<PageN>();
+	this->empty_pages = std::deque<PageN>();
+	this->_debug = false;
 }
 
 BTreeFile::~BTreeFile()
 {
+	
 }
 
-void BTreeFile::findEmptyPages()
+/*void BTreeFile::findEmptyPages()
 {
+	this->empty_pages.clear();
 	if (this->_allocated_page_count == 0)
 		return;
 	for (PageN i = 1; i <= this->_allocated_page_count; i++)
@@ -23,8 +26,29 @@ void BTreeFile::findEmptyPages()
 		{
 			this->empty_pages.push_back(this->_allocated_page_count - i);
 		}
+	}*/
+//}
+
+void BTreeFile::findEmptyPages()
+{
+	this->empty_pages.clear();
+	if (this->_allocated_page_count == 0)
+		return;
+	this->offloadBlockToFile(this->_loaded_page_number);
+
+	for (int i = 0; i < this->_allocated_page_count; i++)
+	{
+		this->loadBlockToBuffer(i);
+
+		BTreeNode node = BTreeNode();
+		node.readPage(this->getBuffer(), this->_page_size);
+		if (node.type == EMPTY)
+		{
+			this->empty_pages.push_back(i);
+		}
 	}
 }
+
 
 void BTreeFile::findRoot()
 {
@@ -75,7 +99,7 @@ std::uint64_t BTreeFile::allocateNewNode()
 	if (!this->empty_pages.empty())
 	{
 		this->loaded_nodes.back()->page_number = this->empty_pages.back();
-		this->empty_pages.pop_back();
+		this->empty_pages.pop_front();
 		return this->loaded_nodes.back()->page_number;
 	}
 
@@ -145,6 +169,11 @@ void BTreeFile::offloadAll()
 	this->offloadRoot();
 }
 
+void BTreeFile::resetLoaded()
+{
+	this->loaded_nodes.clear();
+}
+
 std::shared_ptr<BTreeNode> BTreeFile::getNode(PageN page_number)
 {
 	if (page_number == UINT64_MAX)
@@ -187,7 +216,10 @@ std::shared_ptr<BTreeNode> BTreeFile::grabSecondLoaded()
 void BTreeFile::offloadTopLoaded()
 {
 	if (this->loaded_nodes.empty())
+	{
+		offloadRoot();
 		return;
+	}
 	std::shared_ptr<BTreeNode> node = this->loaded_nodes.back();
 	this->loaded_nodes.pop_back();
 	node->writePage(this->getBuffer(), this->_page_size);
@@ -214,7 +246,7 @@ void BTreeFile::splitNode()
 	}*/
 	//std::shared_ptr<BTreeNode> parent = this->getNode(loaded_node->parent);
 	std::shared_ptr<BTreeNode> parent = this->grabSecondLoaded();
-	std::cout << "SPLIT: allocating node for new sibbling\n";
+	if (_debug) std::cout << "SPLIT: allocating node for new sibbling\n";
 	PageN new_sibling_page = this->allocateNewNode();
 	//std::shared_ptr<BTreeNode> sibling = this->getNode(new_sibling_page);
 	std::shared_ptr<BTreeNode> sibling = this->grabTopLoaded();
@@ -256,7 +288,7 @@ void BTreeFile::splitNode()
 
 void BTreeFile::splitRoot()
 {
-	std::cout << "SPLIT: allocating new root node\n";
+	if (_debug) std::cout << "SPLIT: allocating new root node\n";
 	PageN new_root_page = allocateNewNode();
 	PageN old_root_page = this->root->page_number;
 	std::shared_ptr<BTreeNode> new_root = this->grabTopLoaded();
@@ -280,7 +312,7 @@ void BTreeFile::mergeNode()
 	std::shared_ptr<BTreeNode> underflown_node = this->grabSecondLoaded();
 	bool is_right_sibling = underflown_node->keys.front().key < sibling->keys.front().key;
 	
-	std::cout << "MERGE: merging node " << underflown_node->page_number << " with node " << sibling->page_number << "\n";
+	if (_debug) std::cout << "MERGE: merging node " << underflown_node->page_number << " with node " << sibling->page_number << "\n";
 	// copying the contents of sibling
 	std::deque<KeyStruct> keys_from_sib = sibling->keys;
 	std::deque<PageN> children_from_sib = sibling->children;
@@ -349,7 +381,7 @@ bool BTreeFile::insertCompensation()
 	// if we have a left sibling check if its overflown
 	if (index > 0)
 	{
-		std::cout << "COMPENSATION: trying to compensate into the left sibbling\n";
+		if (_debug) std::cout << "COMPENSATION: trying to compensate into the left sibbling\n";
 		//std::shared_ptr<BTreeNode> left = this->getNode(parent->children[index-1]);
 		this->loadOnTop(parent->children[index - 1]);
 		std::shared_ptr<BTreeNode> left = this->grabTopLoaded();
@@ -367,18 +399,18 @@ bool BTreeFile::insertCompensation()
 				left->children.push_back(overflown_node->children.front());
 				overflown_node->children.pop_front();
 			}
-			std::cout << "COMPENSATION: success\n";
+			if (_debug) std::cout << "COMPENSATION: success\n";
 			this->offloadTopLoaded();
 			return true;
 		}
 		this->offloadTopLoaded();
-		std::cout << "COMPENSATION: left sibbling full\n";
+		if (_debug) std::cout << "COMPENSATION: left sibbling full\n";
 	}
 
 	// if we have a right sibling check if its overflown
 	if (index < parent->children.size() - 1)
 	{
-		std::cout << "COMPENSATION: trying to compensate into the right sibbling\n";
+		if (_debug) std::cout << "COMPENSATION: trying to compensate into the right sibbling\n";
 		//std::shared_ptr<BTreeNode> right = this->getNode(parent->children[index + 1]);
 		this->loadOnTop(parent->children[index + 1]);
 		std::shared_ptr<BTreeNode> right = this->grabTopLoaded();
@@ -397,13 +429,13 @@ bool BTreeFile::insertCompensation()
 				overflown_node->children.pop_back();
 			}
 			this->offloadTopLoaded();
-			std::cout << "COMPENSATION: success\n";
+			if (_debug) std::cout << "COMPENSATION: success\n";
 			return true;
 		}
 		this->offloadTopLoaded();
-		std::cout << "COMPENSATION: right sibbling full\n";
+		if (_debug) std::cout << "COMPENSATION: right sibbling full\n";
 	}
-	std::cout << "COMPENSATION FAIL: sibblings full, couldn't compensate\n";
+	if (_debug) std::cout << "COMPENSATION FAIL: sibblings full, couldn't compensate\n";
 	return false;
 }
 
@@ -417,7 +449,7 @@ bool BTreeFile::removeCompensation()
 
 	if (index > 0)
 	{
-		std::cout << "COMPENSATION: trying to compensate from the left sibbling\n";
+		if (_debug) std::cout << "COMPENSATION: trying to compensate from the left sibbling\n";
 		//std::shared_ptr<BTreeNode> left = this->getNode(parent->children[index-1]);
 		this->loadOnTop(parent->children[index - 1]);
 		std::shared_ptr<BTreeNode> left = this->grabTopLoaded();
@@ -435,12 +467,12 @@ bool BTreeFile::removeCompensation()
 				underflown_node->children.push_front(left->children.back());
 				left->children.pop_back();
 			}
-			std::cout << "COMPENSATION: success\n";
+			if (_debug) std::cout << "COMPENSATION: success\n";
 			this->offloadTopLoaded();
 			return true;
 		}
 		//this->offloadTopLoaded();
-		std::cout << "COMPENSATION: left sibbling on minimal keys\n";
+		if (_debug) std::cout << "COMPENSATION: left sibbling on minimal keys\n";
 	}
 
 	if (index < parent->children.size() - 1)
@@ -451,7 +483,7 @@ bool BTreeFile::removeCompensation()
 		{
 			this->offloadTopLoaded();
 		}
-		std::cout << "COMPENSATION: trying to compensate from the right sibbling\n";
+		if (_debug) std::cout << "COMPENSATION: trying to compensate from the right sibbling\n";
 		//std::shared_ptr<BTreeNode> left = this->getNode(parent->children[index-1]);
 		this->loadOnTop(parent->children[index + 1]);
 		std::shared_ptr<BTreeNode> right = this->grabTopLoaded();
@@ -469,12 +501,12 @@ bool BTreeFile::removeCompensation()
 				underflown_node->children.push_back(right->children.front());
 				right->children.pop_front();
 			}
-			std::cout << "COMPENSATION: success\n";
+			if (_debug) std::cout << "COMPENSATION: success\n";
 			this->offloadTopLoaded();
 			return true;
 		}
 		//this->offloadTopLoaded();
-		std::cout << "COMPENSATION: right sibbling on minimal keys\n";
+		if (_debug) std::cout << "COMPENSATION: right sibbling on minimal keys\n";
 	}
 
 	return false;
@@ -497,7 +529,8 @@ void BTreeFile::printNodeReccurency(PageN page_number, int level)
 		this->loadOnTop(child);
 		this->printNodeReccurency(child, level + 1);
 	}
-	this->offloadTopLoaded();
+	if (!this->loaded_nodes.empty())
+		this->loaded_nodes.pop_back();
 }
 
 KeyStruct BTreeFile::search(Key key)
@@ -562,7 +595,7 @@ bool BTreeFile::insert(KeyStruct key_s)
 	if (search_result.key == key_s.key)
 	{
 		std::cout << "INSERT FAIL: key " << key_s.key << " already in the tree\n";
-		offloadLoadedNodes();
+		resetLoaded();
 		return false;
 	}
 
@@ -573,36 +606,41 @@ bool BTreeFile::insert(KeyStruct key_s)
 
 	// dodawanie
 	node_to_add_to->insertKey(key_s);
-	std::cout << "INSERT: inserting key "<< key_s.key <<" to node "<< node_to_add_to->page_number <<"\n";
+	if (_debug) std::cout << "INSERT: inserting key "<< key_s.key <<" to node "<< node_to_add_to->page_number <<"\n";
 	while (node_to_add_to->keys.size() == 2 * this->d + 1)
 	{
 		if (node_to_add_to->page_number != this->root->page_number)
 		{
-			std::cout << "INSERT: node overflowing, trying compensation with siblings\n";
+			if (_debug) std::cout << "INSERT: node overflowing, trying compensation with siblings\n";
 			if (this->insertCompensation())
+			{
+				this->offloadTopLoaded();
 				break;
+			}
 		}
 		
-		std::cout << "INSERT: node overflowing, splitting into two\n";
+		if (_debug) std::cout << "INSERT: node overflowing, splitting into two\n";
 		if (this->root->page_number == node_to_add_to->page_number)
 			this->splitRoot();
 		else
 			this->splitNode();
 		
 		
-		std::cout << "INSERT: checking if parent overflowing\n";
+		if (_debug) std::cout << "INSERT: checking if parent overflowing\n";
 		this->offloadTopLoaded();
 		node_to_add_to = this->grabTopLoaded();
 		//std::cout << "INSERT: parent(" << node_to_add_to->page_number <<") has "<< node_to_add_to->keys.size() <<" keys\n";
 		//node_to_add_to = this->getNode(node_to_add_to->parent);
 	}
+	this->offloadTopLoaded();
+	this->offloadTopLoaded();
 	
-	this->offloadLoadedNodes();
+	this->resetLoaded();
 	//this->showTree();
 	return true;
 }
 
-bool BTreeFile::remove(Key key)
+KeyStruct BTreeFile::remove(Key key)
 {
 	// search for the key (loading the required nodes)
 	KeyStruct search_result = this->search(key);
@@ -612,18 +650,18 @@ bool BTreeFile::remove(Key key)
 	{
 		std::cout << "REMOVE FAIL: key " << key << " not in the tree\n";
 		this->offloadLoadedNodes();
-		return false;
+		return search_result;
 	}
 	
 	// if found on a leaf, remove
 	std::shared_ptr<BTreeNode> node_to_remove_from = this->grabTopLoaded();
 	int key_index_in_node = node_to_remove_from->findKeyIndex(key);
 
-	std::cout << "REMOVE: removing key " << key << " from node " << node_to_remove_from->page_number << "\n";
+	if (_debug) std::cout << "REMOVE: removing key " << key << " from node " << node_to_remove_from->page_number << "\n";
 
 	if (node_to_remove_from->children.empty())
 	{
-		std::cout << "REMOVE: removing key from leaf\n";
+		if (_debug) std::cout << "REMOVE: removing key from leaf\n";
 		node_to_remove_from->keys.erase(node_to_remove_from->keys.begin() + key_index_in_node);		
 	}
 	else
@@ -636,7 +674,7 @@ bool BTreeFile::remove(Key key)
 		// check if not minimal key number
 		if (node_with_replace_key->keys.size() == this->d)
 		{
-			std::cout << "REMOVE: predecesor node on minimal keys, trying the successor node\n";
+			if (_debug) std::cout << "REMOVE: predecesor node on minimal keys, trying the successor node\n";
 			// if yes, unload from memory and go to the successor
 			while (!(this->grabTopLoaded() == node_to_remove_from))
 				this->offloadTopLoaded();
@@ -647,14 +685,14 @@ bool BTreeFile::remove(Key key)
 
 		if (in_left_subtree)
 		{
-			std::cout << "REMOVE: replacing key with predecesor\n";
+			if (_debug) std::cout << "REMOVE: replacing key with predecesor\n";
 			KeyStruct replacement_key = node_with_replace_key->keys.back();
 			node_with_replace_key->keys.pop_back();
 			node_to_remove_from->replaceKey(replacement_key, key_index_in_node);
 		}
 		else
 		{
-			std::cout << "REMOVE: replacing key with successor\n";
+			if (_debug) std::cout << "REMOVE: replacing key with successor\n";
 			KeyStruct replacement_key = node_with_replace_key->keys.front();
 			node_with_replace_key->keys.pop_front();
 			node_to_remove_from->replaceKey(replacement_key, key_index_in_node);
@@ -664,31 +702,32 @@ bool BTreeFile::remove(Key key)
 	std::shared_ptr<BTreeNode> node_to_check = this->grabTopLoaded();
 	while (node_to_check->keys.size() < this->d && node_to_check->type != ROOT)
 	{
-		std::cout << "REMOVE: node underflowing, trying to compensate with siblings\n";
+		if (_debug) std::cout << "REMOVE: node underflowing, trying to compensate with siblings\n";
 		if (this->removeCompensation())
 			break;
-		std::cout << "REMOVE: node underflowing, merging with a sibling\n";
+		if (_debug) std::cout << "REMOVE: node underflowing, merging with a sibling\n";
 		this->mergeNode();
 
 		if (node_to_check->type == ROOT)
 		{
-			std::cout << "REMOVE: node became new root\n";
+			if (_debug) std::cout << "REMOVE: node became new root\n";
 			break;
 		}
 
-		std::cout << "REMOVE: checking if parent underflowing\n";
+		if (_debug) std::cout << "REMOVE: checking if parent underflowing\n";
 		this->offloadTopLoaded();
 		node_to_check = this->grabTopLoaded();
 	}
-	this->offloadLoadedNodes();
+	this->offloadTopLoaded();
+	this->resetLoaded();
 
-	return true;
+	return search_result;
 }
 
 void BTreeFile::showTree()
 {
 	this->printNodeReccurency(this->root->page_number, 0);
-	this->offloadLoadedNodes();
+	this->resetLoaded();
 }
 
 void BTreeFile::showFile()
@@ -726,6 +765,83 @@ void BTreeFile::showFile()
 		std::cout << "]\n";
 	}
 }
+
+void BTreeFile::startKeyByKey()
+{
+	this->offloadLoadedNodes();
+	this->search(0);
+	for (int i = 0; i <= this->loaded_nodes.size(); i++)
+		this->key_by_key_cursors.push(0);
+}
+
+KeyStruct BTreeFile::getNextKey()
+{
+	//only reading no need to offload
+	std::shared_ptr<BTreeNode> top_node = this->grabTopLoaded();
+	while (!this->key_by_key_cursors.empty() && this->key_by_key_cursors.top() == top_node->keys.size())
+	{
+		this->key_by_key_cursors.pop();
+		if (!this->loaded_nodes.empty())
+			this->loaded_nodes.pop_back();
+		top_node = this->grabTopLoaded();
+	}
+
+	if (this->key_by_key_cursors.size() == 0)
+	{
+		return KeyStruct(UINT64_MAX, UINT64_MAX);
+	}
+
+	KeyStruct key_to_return = top_node->keys[this->key_by_key_cursors.top()];
+	this->key_by_key_cursors.top()++;
+	if (top_node == this->root)
+	{
+		// if on root, we need to load the subtree
+		this->search(key_to_return.key + 1);
+		for (int i = 0; i < this->loaded_nodes.size(); i++)
+			this->key_by_key_cursors.push(0);
+	}
+	else if (!top_node->children.empty())
+	{
+		this->loadOnTop(top_node->children[this->key_by_key_cursors.top()]);
+		this->key_by_key_cursors.push(0);
+	}
+
+	return key_to_return;
+}
+
+void BTreeFile::stopKeyByKey()
+{
+	this->resetLoaded();
+	for (int i = this->key_by_key_cursors.size(); i > 0 ; i--)
+		this->key_by_key_cursors.pop();
+}
+
+void BTreeFile::cleanBack()
+{
+	int empty_back_count = 0;
+	for (int i = this->_allocated_page_count - 1; i >= 0; i--)
+	{
+		BTreeNode node = BTreeNode();
+		this->loadBlockToBuffer(i);
+		node.readPage(this->getBuffer(), this->_page_size);
+		if (node.type == EMPTY)
+			empty_back_count++;
+		else
+			break;
+	}
+	this->close();
+	std::filesystem::resize_file(this->_file_path, (_allocated_page_count - empty_back_count) * this->_page_size);
+	this->_allocated_page_count -= empty_back_count;
+	this->open(this->_file_path);
+}
+
+bool BTreeFile::shouldRebuild(double empty_limit)
+{
+	return (this->empty_pages.size() / (double)this->_allocated_page_count) > empty_limit;
+}
+
+
+
 
 
 

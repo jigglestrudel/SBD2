@@ -128,7 +128,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BTreeBuffer.cpp" />
     <ClCompile Include="BTreeFile.cpp" />
     <ClCompile Include="BTreeNode.cpp" />
     <ClCompile Include="BTreeNode.h" />
@@ -141,7 +140,6 @@
     <ClCompile Include="RecordFile.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BTreeBuffer.h" />
     <ClInclude Include="BTreeFile.h" />
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Database.h" />
